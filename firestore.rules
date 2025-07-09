@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Users can read and write their own subscription document
+    match /subscriptions/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Users can read and write their own boards
+    match /boards/{boardId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.createdBy;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.createdBy;
+      allow update: if request.auth != null && request.auth.uid == resource.data.createdBy;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
+    }
+    
+    // Allow users to read and write any document if authenticated (for development)
+    // In production, you should be more restrictive
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

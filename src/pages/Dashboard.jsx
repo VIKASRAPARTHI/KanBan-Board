@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { db } from '../config/firebase'
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore'
 import { Plus, Calendar, User, X, Edit3, MoreVertical, Trash2, Search, GripVertical } from 'lucide-react'
@@ -13,6 +14,7 @@ import { SkeletonBoard } from '../components/LoadingSpinner'
 import { EmptyBoardsState, EmptyListState } from '../components/EmptyState'
 import { BoardProgress } from '../components/ProgressIndicator'
 import DragDropHint from '../components/DragDropHint'
+import UpgradeModal from '../components/UpgradeModal'
 import toast from 'react-hot-toast'
 
 export default function Dashboard() {
@@ -25,7 +27,9 @@ export default function Dashboard() {
   const [currentListId, setCurrentListId] = useState(null)
   const [openDropdown, setOpenDropdown] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [upgradeModal, setUpgradeModal] = useState({ isOpen: false, reason: '' })
   const { currentUser } = useAuth()
+  const { canCreateBoard, getPlanLimits, subscription } = useSubscription()
 
   useEffect(() => {
     if (currentUser) {
@@ -81,6 +85,15 @@ export default function Dashboard() {
   const handleBoardCreated = () => {
     // Board is already added to Firestore, so it will appear via the real-time listener
     setIsBoardModalOpen(false)
+  }
+
+  const handleCreateBoard = () => {
+    console.log('Current boards:', boards.length, 'Can create:', canCreateBoard(boards.length))
+    if (!canCreateBoard(boards.length)) {
+      setUpgradeModal({ isOpen: true, reason: 'board_limit' })
+      return
+    }
+    setIsBoardModalOpen(true)
   }
 
   const deleteBoard = async (boardId, boardName) => {
@@ -297,7 +310,32 @@ export default function Dashboard() {
               transition={{ delay: 0.2 }}
             >
               <h1 className="text-2xl font-bold text-gray-900">Kanban Boards</h1>
-              <p className="text-gray-600">Manage your projects and tasks</p>
+              <div className="flex items-center space-x-4 mt-1">
+                <p className="text-gray-600">Manage your projects and tasks</p>
+                {subscription && (
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      subscription.plan === 'free'
+                        ? 'bg-gray-100 text-gray-700'
+                        : subscription.plan === 'pro'
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : subscription.plan === 'team'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} Plan
+                    </span>
+                    {subscription.plan === 'free' && (
+                      <button
+                        onClick={() => setUpgradeModal({ isOpen: true, reason: 'feature_locked' })}
+                        className="text-indigo-600 hover:text-indigo-700 text-xs font-medium"
+                      >
+                        Upgrade
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -326,11 +364,18 @@ export default function Dashboard() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsBoardModalOpen(true)}
-                className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+                onClick={handleCreateBoard}
+                disabled={!canCreateBoard(boards.length)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                  canCreateBoard(boards.length)
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <Plus size={20} />
-                <span>New Board</span>
+                <span>
+                  {canCreateBoard(boards.length) ? 'New Board' : 'Limit Reached'}
+                </span>
               </motion.button>
             </motion.div>
           </div>
@@ -338,8 +383,86 @@ export default function Dashboard() {
 
         </div>
 
+        {/* Usage Indicator for All Plans */}
+        {subscription && boards.length > 0 && getPlanLimits().boards !== -1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-6 p-4 border rounded-lg ${
+              boards.length >= getPlanLimits().boards
+                ? 'bg-red-50 border-red-200'
+                : subscription?.plan === 'free'
+                ? 'bg-blue-50 border-blue-200'
+                : subscription?.plan === 'pro'
+                ? 'bg-indigo-50 border-indigo-200'
+                : 'bg-purple-50 border-purple-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`text-sm font-medium ${
+                  boards.length >= getPlanLimits().boards
+                    ? 'text-red-900'
+                    : subscription?.plan === 'free'
+                    ? 'text-blue-900'
+                    : subscription?.plan === 'pro'
+                    ? 'text-indigo-900'
+                    : 'text-purple-900'
+                }`}>
+                  Board Usage {boards.length >= getPlanLimits().boards && '- Limit Reached!'}
+                  <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                    subscription?.plan === 'free'
+                      ? 'bg-gray-100 text-gray-700'
+                      : subscription?.plan === 'pro'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {subscription?.plan?.charAt(0).toUpperCase() + subscription?.plan?.slice(1)} Plan
+                  </span>
+                </h3>
+                <p className={`text-sm ${
+                  boards.length >= getPlanLimits().boards
+                    ? 'text-red-700'
+                    : subscription?.plan === 'free'
+                    ? 'text-blue-700'
+                    : subscription?.plan === 'pro'
+                    ? 'text-indigo-700'
+                    : 'text-purple-700'
+                }`}>
+                  {boards.length} of {getPlanLimits().boards} boards used
+                </p>
+                {boards.length >= getPlanLimits().boards && (
+                  <p className="text-red-600 text-xs mt-1">
+                    Upgrade to create more boards
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      boards.length >= getPlanLimits().boards ? 'bg-red-500' : 'bg-blue-600'
+                    }`}
+                    style={{ width: `${Math.min((boards.length / getPlanLimits().boards) * 100, 100)}%` }}
+                  />
+                </div>
+                <button
+                  onClick={() => setUpgradeModal({ isOpen: true, reason: 'board_limit' })}
+                  className={`text-sm font-medium ${
+                    boards.length >= getPlanLimits().boards
+                      ? 'text-red-600 hover:text-red-700'
+                      : 'text-blue-600 hover:text-blue-700'
+                  }`}
+                >
+                  Upgrade
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {boards.length === 0 ? (
-          <EmptyBoardsState onCreateBoard={() => setIsBoardModalOpen(true)} />
+          <EmptyBoardsState onCreateBoard={handleCreateBoard} />
         ) : filteredBoards.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
@@ -555,6 +678,14 @@ export default function Dashboard() {
 
         {/* Drag & Drop Hint */}
         <DragDropHint />
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          isOpen={upgradeModal.isOpen}
+          onClose={() => setUpgradeModal({ isOpen: false, reason: '' })}
+          reason={upgradeModal.reason}
+          currentPlan={subscription?.plan || 'free'}
+        />
       </motion.div>
     </Layout>
   )

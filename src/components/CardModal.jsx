@@ -16,6 +16,15 @@ import { format } from 'date-fns'
 import { storage } from '../config/firebase'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { v4 as uuidv4 } from 'uuid'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import {
+  TimeTracker,
+  CustomFields,
+  PrioritySelector,
+  DueDatePicker,
+  AssigneeSelector,
+  PremiumFeatureWrapper
+} from './PremiumCardFeatures'
 import toast from 'react-hot-toast'
 
 export default function CardModal({ 
@@ -26,6 +35,7 @@ export default function CardModal({
   onDelete,
   boardMembers = [] 
 }) {
+  const { subscription, hasFeature } = useSubscription()
   const [uploading, setUploading] = useState(false)
   const [attachments, setAttachments] = useState(card?.attachments || [])
   
@@ -275,6 +285,71 @@ export default function CardModal({
                           type="date"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                         />
+                      </div>
+
+                      {/* Premium Features */}
+                      <div className="space-y-4 border-t pt-4">
+                        <h3 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+                          <span>Advanced Features</span>
+                          {subscription?.plan === 'free' && (
+                            <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">
+                              Pro Features
+                            </span>
+                          )}
+                        </h3>
+
+                        {/* Enhanced Priority Selector */}
+                        <PremiumFeatureWrapper feature="priority_levels" requiredPlan="pro">
+                          <PrioritySelector
+                            card={card}
+                            onUpdate={(updates) => {
+                              // Update form values
+                              Object.keys(updates).forEach(key => {
+                                setValue(key, updates[key])
+                              })
+                            }}
+                            disabled={!hasFeature('priority_levels')}
+                          />
+                        </PremiumFeatureWrapper>
+
+                        {/* Time Tracking */}
+                        <PremiumFeatureWrapper feature="time_tracking" requiredPlan="pro">
+                          <TimeTracker
+                            card={card}
+                            onUpdate={(updates) => {
+                              Object.keys(updates).forEach(key => {
+                                setValue(key, updates[key])
+                              })
+                            }}
+                            disabled={!hasFeature('time_tracking')}
+                          />
+                        </PremiumFeatureWrapper>
+
+                        {/* Custom Fields */}
+                        <PremiumFeatureWrapper feature="custom_fields" requiredPlan="pro">
+                          <CustomFields
+                            card={card}
+                            onUpdate={(updates) => {
+                              Object.keys(updates).forEach(key => {
+                                setValue(key, updates[key])
+                              })
+                            }}
+                            disabled={!hasFeature('custom_fields')}
+                          />
+                        </PremiumFeatureWrapper>
+
+                        {/* Enhanced Assignee Selector */}
+                        <PremiumFeatureWrapper feature="advanced_permissions" requiredPlan="team">
+                          <AssigneeSelector
+                            card={card}
+                            onUpdate={(updates) => {
+                              Object.keys(updates).forEach(key => {
+                                setValue(key, updates[key])
+                              })
+                            }}
+                            disabled={!hasFeature('advanced_permissions')}
+                          />
+                        </PremiumFeatureWrapper>
                       </div>
 
                       {/* File Attachments */}

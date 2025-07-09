@@ -31,7 +31,7 @@ export default function Register() {
     try {
       await signup(data.email, data.password)
       toast.success('Account created successfully! Welcome!', { id: loadingToast })
-      navigate('/')
+      navigate('/dashboard')
     } catch (error) {
       console.error('Registration error:', error)
       let errorMessage = 'Failed to create account'

@@ -12,6 +12,7 @@ import {
   SparklesIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { db } from '../config/firebase'
 import { collection, addDoc } from 'firebase/firestore'
 import toast from 'react-hot-toast'
@@ -82,6 +83,95 @@ const boardTemplates = [
       { id: 'practicing', title: 'Practicing', cards: [] },
       { id: 'mastered', title: 'Mastered', cards: [] }
     ]
+  },
+  // Premium Templates (Pro & Team only)
+  {
+    id: 'sprint',
+    name: 'Sprint Planning',
+    description: 'Agile sprint management with story points',
+    icon: RocketLaunchIcon,
+    color: 'bg-purple-500',
+    premium: true,
+    requiredPlan: 'pro',
+    lists: [
+      { id: 'product-backlog', title: 'Product Backlog', cards: [] },
+      { id: 'sprint-backlog', title: 'Sprint Backlog', cards: [] },
+      { id: 'in-progress', title: 'In Progress', cards: [] },
+      { id: 'code-review', title: 'Code Review', cards: [] },
+      { id: 'testing', title: 'Testing', cards: [] },
+      { id: 'done', title: 'Done', cards: [] }
+    ]
+  },
+  {
+    id: 'marketing',
+    name: 'Marketing Campaign',
+    description: 'Plan and execute marketing campaigns',
+    icon: SparklesIcon,
+    color: 'bg-orange-500',
+    premium: true,
+    requiredPlan: 'pro',
+    lists: [
+      { id: 'ideas', title: 'Campaign Ideas', cards: [] },
+      { id: 'planning', title: 'Planning', cards: [] },
+      { id: 'content-creation', title: 'Content Creation', cards: [] },
+      { id: 'review', title: 'Review & Approval', cards: [] },
+      { id: 'scheduled', title: 'Scheduled', cards: [] },
+      { id: 'live', title: 'Live', cards: [] },
+      { id: 'completed', title: 'Completed', cards: [] }
+    ]
+  },
+  {
+    id: 'sales-pipeline',
+    name: 'Sales Pipeline',
+    description: 'Track leads and sales opportunities',
+    icon: BriefcaseIcon,
+    color: 'bg-green-600',
+    premium: true,
+    requiredPlan: 'pro',
+    lists: [
+      { id: 'leads', title: 'New Leads', cards: [] },
+      { id: 'qualified', title: 'Qualified', cards: [] },
+      { id: 'proposal', title: 'Proposal Sent', cards: [] },
+      { id: 'negotiation', title: 'Negotiation', cards: [] },
+      { id: 'closed-won', title: 'Closed Won', cards: [] },
+      { id: 'closed-lost', title: 'Closed Lost', cards: [] }
+    ]
+  },
+  {
+    id: 'product-roadmap',
+    name: 'Product Roadmap',
+    description: 'Strategic product planning and feature tracking',
+    icon: AcademicCapIcon,
+    color: 'bg-indigo-600',
+    premium: true,
+    requiredPlan: 'team',
+    lists: [
+      { id: 'research', title: 'Research', cards: [] },
+      { id: 'planned', title: 'Planned', cards: [] },
+      { id: 'q1', title: 'Q1 2024', cards: [] },
+      { id: 'q2', title: 'Q2 2024', cards: [] },
+      { id: 'q3', title: 'Q3 2024', cards: [] },
+      { id: 'released', title: 'Released', cards: [] }
+    ]
+  },
+  {
+    id: 'hr-recruitment',
+    name: 'HR Recruitment',
+    description: 'Manage hiring process and candidate pipeline',
+    icon: HeartIcon,
+    color: 'bg-teal-500',
+    premium: true,
+    requiredPlan: 'team',
+    lists: [
+      { id: 'applications', title: 'Applications', cards: [] },
+      { id: 'screening', title: 'Phone Screening', cards: [] },
+      { id: 'interview-1', title: 'First Interview', cards: [] },
+      { id: 'interview-2', title: 'Final Interview', cards: [] },
+      { id: 'reference', title: 'Reference Check', cards: [] },
+      { id: 'offer', title: 'Offer Extended', cards: [] },
+      { id: 'hired', title: 'Hired', cards: [] },
+      { id: 'rejected', title: 'Rejected', cards: [] }
+    ]
   }
 ]
 
@@ -89,6 +179,22 @@ export default function BoardCreationModal({ isOpen, onClose, onBoardCreated }) 
   const [selectedTemplate, setSelectedTemplate] = useState(boardTemplates[0])
   const [step, setStep] = useState(1) // 1: Template selection, 2: Board details
   const { currentUser } = useAuth()
+  const { subscription, hasFeature } = useSubscription()
+
+  // Filter templates based on subscription plan
+  const availableTemplates = boardTemplates.filter(template => {
+    if (!template.premium) return true // Free templates
+
+    const userPlan = subscription?.plan || 'free'
+    if (userPlan === 'free') return false
+
+    // Check if user's plan meets the required plan
+    const planHierarchy = { 'pro': 1, 'team': 2, 'enterprise': 3 }
+    const userPlanLevel = planHierarchy[userPlan] || 0
+    const requiredPlanLevel = planHierarchy[template.requiredPlan] || 0
+
+    return userPlanLevel >= requiredPlanLevel
+  })
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     defaultValues: {
@@ -190,7 +296,8 @@ export default function BoardCreationModal({ isOpen, onClose, onBoardCreated }) 
                         </p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {boardTemplates.map((template) => {
+                          {/* Available Templates */}
+                          {availableTemplates.map((template) => {
                             const Icon = template.icon
                             return (
                               <motion.div
@@ -217,6 +324,52 @@ export default function BoardCreationModal({ isOpen, onClose, onBoardCreated }) 
                               </motion.div>
                             )
                           })}
+
+                          {/* Premium Templates Preview for Free Users */}
+                          {subscription?.plan === 'free' && (
+                            <>
+                              {boardTemplates.filter(t => t.premium && t.requiredPlan === 'pro').slice(0, 2).map((template) => {
+                                const Icon = template.icon
+                                return (
+                                  <motion.div
+                                    key={template.id}
+                                    className="relative p-4 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 opacity-75"
+                                  >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-lg flex items-center justify-center">
+                                      <div className="bg-white px-3 py-1 rounded-full shadow-sm">
+                                        <span className="text-xs font-medium text-indigo-600">Pro Feature</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-3 mb-3">
+                                      <div className={`p-2 rounded-lg ${template.color}`}>
+                                        <Icon className="h-5 w-5 text-white" />
+                                      </div>
+                                      <h4 className="font-medium text-gray-900">{template.name}</h4>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-3">{template.description}</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {template.lists.slice(0, 3).map((list, idx) => (
+                                        <span key={idx} className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">
+                                          {list.title}
+                                        </span>
+                                      ))}
+                                      {template.lists.length > 3 && (
+                                        <span className="text-xs text-gray-500">+{template.lists.length - 3} more</span>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )
+                              })}
+                              <motion.div className="p-4 rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 flex flex-col items-center justify-center text-center min-h-[200px]">
+                                <SparklesIcon className="h-8 w-8 text-indigo-500 mb-2" />
+                                <h4 className="font-medium text-indigo-900 mb-1">Unlock Premium Templates</h4>
+                                <p className="text-sm text-indigo-700 mb-3">Get access to 5+ professional templates</p>
+                                <button className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700 transition-colors">
+                                  Upgrade to Pro
+                                </button>
+                              </motion.div>
+                            </>
+                          )}
                         </div>
 
                         <div className="flex justify-end space-x-3 pt-4 border-t">

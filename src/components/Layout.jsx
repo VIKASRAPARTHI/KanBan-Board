@@ -1,18 +1,24 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
-import { BarChart3, Kanban, LogOut, User, Menu, X } from 'lucide-react'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { BarChart3, Kanban, LogOut, User, Menu, X, CreditCard, Star } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Layout({ children = null }) {
   const { currentUser, logout } = useAuth()
+  const { getTrialDaysLeft, isTrialSubscription } = useSubscription()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Kanban },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Billing', href: '/billing', icon: CreditCard },
   ]
+
+  const trialDaysLeft = getTrialDaysLeft()
+  const showTrialBanner = isTrialSubscription()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -70,6 +76,23 @@ export default function Layout({ children = null }) {
                     )
                   })}
                 </nav>
+
+                {/* Trial Banner */}
+                {showTrialBanner && (
+                  <div className="border-t border-b p-4 bg-blue-50">
+                    <div className="flex items-center space-x-2">
+                      <Star className="h-4 w-4 text-blue-600" />
+                      <div className="text-xs">
+                        <p className="font-medium text-blue-900">
+                          {trialDaysLeft} days left in trial
+                        </p>
+                        <Link to="/billing" className="text-blue-600 hover:text-blue-800">
+                          Upgrade now
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t p-4">
                   <div className="flex items-center justify-between">
@@ -137,6 +160,23 @@ export default function Layout({ children = null }) {
                 )
               })}
             </nav>
+
+            {/* Trial Banner - Desktop */}
+            {showTrialBanner && (
+              <div className="border-t border-b p-4 bg-blue-50">
+                <div className="flex items-center space-x-2">
+                  <Star className="h-4 w-4 text-blue-600" />
+                  <div className="text-xs">
+                    <p className="font-medium text-blue-900">
+                      {trialDaysLeft} days left in trial
+                    </p>
+                    <Link to="/billing" className="text-blue-600 hover:text-blue-800">
+                      Upgrade now
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="border-t p-4">
               <div className="flex items-center justify-between">
