@@ -41,7 +41,7 @@ export default function Layout({ children = null }) {
             >
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between px-6 py-4 border-b">
-                  <h1 className="text-xl font-bold text-gray-900">Kanban</h1>
+                  <h1 className="text-xl font-bold text-gray-900">TaskFlow Pro</h1>
                   <button
                     onClick={() => setSidebarOpen(false)}
                     className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"
@@ -128,7 +128,7 @@ export default function Layout({ children = null }) {
                 animate={{ opacity: 1, x: 0 }}
                 className="text-xl font-bold text-gray-900"
               >
-                Kanban
+                TaskFlow Pro
               </motion.h1>
             </div>
 
@@ -212,7 +212,7 @@ export default function Layout({ children = null }) {
               >
                 <Menu className="h-6 w-6" />
               </motion.button>
-              <h1 className="text-lg font-semibold text-gray-900">Kanban</h1>
+              <h1 className="text-lg font-semibold text-gray-900">TaskFlow Pro</h1>
               <div className="w-8" /> {/* Spacer for centering */}
             </div>
           </div>
