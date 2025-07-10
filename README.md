@@ -2,6 +2,7 @@
 
 A subscription-based Kanban project management application with premium features and payment integration.
 
+![Screenshot](https://github.com/VIKASRAPARTHI/KanBan-Board/blob/main/public/Screenshot.png?raw=true)
 ## Features
 
 ### Core Features
