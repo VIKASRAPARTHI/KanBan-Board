@@ -17,10 +17,6 @@ export default function DragDropHint() {
     }
   }, [])
 
-  // const handleDragstart = () => {
-  //   setShowHint(false);
-  // }
-
   const dismissHint = () => {
     setShowHint(false)
     localStorage.setItem('kanban-drag-hint-seen', 'true')
