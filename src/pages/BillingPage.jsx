@@ -11,12 +11,14 @@ import {
 } from '@heroicons/react/24/outline'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import Layout from '../components/Layout'
+import DynamicUpgradeModal from '../components/DynamicUpgradeModal'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 export default function BillingPage() {
   const { subscription, cancelSubscription, getPlanLimits, getTrialDaysLeft, isTrialExpired } = useSubscription()
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const navigate = useNavigate()
 
   const planLimits = getPlanLimits()
@@ -83,7 +85,7 @@ export default function BillingPage() {
             <p className="text-gray-600 mt-2">Manage your subscription and billing information</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {/* Current Plan */}
             <div className="lg:col-span-2 space-y-6">
               <motion.div
@@ -174,28 +176,12 @@ export default function BillingPage() {
                 </div>
 
                 <div className="mt-6 flex space-x-4">
-                  {subscription?.plan === 'free' && (
+                  {subscription?.plan !== 'enterprise' && (
                     <button
-                      onClick={() => navigate('/subscribe/pro')}
+                      onClick={() => setShowUpgradeModal(true)}
                       className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
                     >
-                      Upgrade to Pro
-                    </button>
-                  )}
-                  {subscription?.plan === 'pro' && (
-                    <button
-                      onClick={() => navigate('/subscribe/team')}
-                      className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
-                    >
-                      Upgrade to Team
-                    </button>
-                  )}
-                  {subscription?.plan === 'team' && (
-                    <button
-                      onClick={() => navigate('/subscribe/enterprise')}
-                      className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
-                    >
-                      Contact for Enterprise
+                      Upgrade Plan
                     </button>
                   )}
                   {subscription?.plan !== 'free' && (
@@ -362,6 +348,13 @@ export default function BillingPage() {
             </motion.div>
           </div>
         )}
+
+        {/* Dynamic Upgrade Modal */}
+        <DynamicUpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          reason="billing_upgrade"
+        />
       </div>
     </Layout>
   )

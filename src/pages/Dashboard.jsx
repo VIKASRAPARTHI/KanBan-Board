@@ -14,7 +14,7 @@ import { SkeletonBoard } from '../components/LoadingSpinner'
 import { EmptyBoardsState, EmptyListState } from '../components/EmptyState'
 import { BoardProgress } from '../components/ProgressIndicator'
 import DragDropHint from '../components/DragDropHint'
-import UpgradeModal from '../components/UpgradeModal'
+import DynamicUpgradeModal from '../components/DynamicUpgradeModal'
 import toast from 'react-hot-toast'
 
 export default function Dashboard() {
@@ -29,7 +29,7 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('')
   const [upgradeModal, setUpgradeModal] = useState({ isOpen: false, reason: '' })
   const { currentUser } = useAuth()
-  const { canCreateBoard, getPlanLimits, subscription } = useSubscription()
+  const { canCreateBoard, getPlanLimits, subscription, loading: subscriptionLoading, ensureSubscriptionExists } = useSubscription()
 
   useEffect(() => {
     if (currentUser) {
@@ -45,6 +45,18 @@ export default function Dashboard() {
       return unsubscribe
     }
   }, [currentUser])
+
+  // Ensure subscription exists for new users
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (currentUser && !subscriptionLoading && !subscription) {
+        console.log('User has no subscription, creating free subscription...')
+        await ensureSubscriptionExists()
+      }
+    }
+
+    checkSubscription()
+  }, [currentUser, subscription, subscriptionLoading, ensureSubscriptionExists])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -87,8 +99,36 @@ export default function Dashboard() {
     setIsBoardModalOpen(false)
   }
 
-  const handleCreateBoard = () => {
-    console.log('Current boards:', boards.length, 'Can create:', canCreateBoard(boards.length))
+  const handleCreateBoard = async () => {
+    console.log('handleCreateBoard called:', {
+      boardsLength: boards.length,
+      subscription,
+      subscriptionLoading,
+      canCreate: canCreateBoard(boards.length)
+    })
+
+    // Wait for subscription to load
+    if (subscriptionLoading) {
+      console.log('Subscription still loading, please wait...')
+      return
+    }
+
+    // Ensure subscription exists
+    if (!subscription) {
+      console.log('No subscription found, creating one...')
+      const created = await ensureSubscriptionExists()
+      if (!created) {
+        toast.error('Failed to set up your account. Please try again.')
+        return
+      }
+      // Wait a moment for the subscription to be set
+      setTimeout(() => {
+        console.log('Subscription should now exist, retrying...')
+        handleCreateBoard()
+      }, 1000)
+      return
+    }
+
     if (!canCreateBoard(boards.length)) {
       setUpgradeModal({ isOpen: true, reason: 'board_limit' })
       return
@@ -287,7 +327,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <Layout>
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <SkeletonBoard />
         </div>
       </Layout>
@@ -300,40 +340,30 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="p-8"
+        className="p-4 sm:p-6 lg:p-8"
       >
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h1 className="text-2xl font-bold text-gray-900">Kanban Boards</h1>
-              <div className="flex items-center space-x-4 mt-1">
-                <p className="text-gray-600">Manage your projects and tasks</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Kanban Boards</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-1 gap-2 sm:gap-0">
+                <p className="text-gray-600 text-sm sm:text-base">Manage your projects and tasks</p>
                 {subscription && (
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      subscription.plan === 'free'
-                        ? 'bg-gray-100 text-gray-700'
-                        : subscription.plan === 'pro'
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : subscription.plan === 'team'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} Plan
-                    </span>
-                    {subscription.plan === 'free' && (
-                      <button
-                        onClick={() => setUpgradeModal({ isOpen: true, reason: 'feature_locked' })}
-                        className="text-indigo-600 hover:text-indigo-700 text-xs font-medium"
-                      >
-                        Upgrade
-                      </button>
-                    )}
-                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    subscription.plan === 'free'
+                      ? 'bg-gray-100 text-gray-700'
+                      : subscription.plan === 'pro'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : subscription.plan === 'team'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} Plan
+                  </span>
                 )}
               </div>
             </motion.div>
@@ -341,16 +371,16 @@ export default function Dashboard() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex items-center space-x-4"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:space-x-4 w-full sm:w-auto"
             >
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="text"
-                  placeholder="Search boards... (Ctrl+K)"
+                  placeholder="Search boards..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-16 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full sm:w-64 pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
                 />
                 {searchTerm && (
                   <button
@@ -365,16 +395,21 @@ export default function Dashboard() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleCreateBoard}
-                disabled={!canCreateBoard(boards.length)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
-                  canCreateBoard(boards.length)
+                disabled={subscriptionLoading || !canCreateBoard(boards.length)}
+                className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors w-full sm:w-auto ${
+                  !subscriptionLoading && canCreateBoard(boards.length)
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
                 <Plus size={20} />
-                <span>
-                  {canCreateBoard(boards.length) ? 'New Board' : 'Limit Reached'}
+                <span className="text-sm sm:text-base">
+                  {subscriptionLoading
+                    ? 'Loading...'
+                    : canCreateBoard(boards.length)
+                    ? 'New Board'
+                    : 'Limit Reached'
+                  }
                 </span>
               </motion.button>
             </motion.div>
@@ -536,7 +571,107 @@ export default function Dashboard() {
                 </div>
             
             <DragDropContext onDragEnd={onDragEnd} onDragStart={onDragStart}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Mobile: Horizontal scroll layout */}
+              <div className="block lg:hidden">
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                  {board.lists?.map(list => (
+                    <div key={list.id} className="bg-gray-100 rounded-lg p-4 w-80 flex-shrink-0">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-medium text-gray-900">{list.title}</h4>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => addCard(board.id, list.id)}
+                          className="text-gray-500 hover:text-gray-700 p-1 rounded-md hover:bg-gray-200 transition-colors"
+                        >
+                          <Plus size={16} />
+                        </motion.button>
+                      </div>
+
+                      <Droppable droppableId={`${board.id}-${list.id}`}>
+                        {(provided, snapshot) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className={`space-y-2 min-h-[200px] p-2 rounded-md transition-all duration-200 ${
+                              snapshot.isDraggingOver
+                                ? 'bg-blue-50 border-2 border-blue-300 border-dashed shadow-inner'
+                                : 'border-2 border-transparent'
+                            }`}
+                          >
+                            {(list.cards || []).length === 0 ? (
+                              <EmptyListState
+                                listName={list.title}
+                                onAddCard={() => addCard(board.id, list.id)}
+                              />
+                            ) : (list.cards || []).map((card, index) => {
+                              if (!card.id) return null
+                              return (
+                                <Draggable key={`${board.id}-${list.id}-${card.id}`} draggableId={card.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      className={`bg-white p-3 rounded-md shadow-sm border hover:shadow-md transition-all relative group cursor-pointer ${
+                                        snapshot.isDragging
+                                          ? 'rotate-2 shadow-2xl scale-105 border-blue-300 bg-blue-50'
+                                          : 'hover:border-gray-300'
+                                      }`}
+                                      onClick={() => handleCardClick(card)}
+                                    >
+                                      <div className="flex justify-between items-start mb-2">
+                                        <div {...provided.dragHandleProps} className="flex-1">
+                                          <h5 className="font-medium text-gray-900 text-sm leading-tight">{card.title}</h5>
+                                        </div>
+                                        <div className="flex items-center space-x-1 ml-2">
+                                          <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                            <GripVertical size={14} className="text-gray-400" />
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {card.description && (
+                                        <p className="text-gray-600 text-xs mb-3 line-clamp-2">{card.description}</p>
+                                      )}
+
+                                      <div className="flex items-center justify-between text-xs text-gray-500">
+                                        <div className="flex items-center space-x-2">
+                                          {card.dueDate && (
+                                            <div className="flex items-center space-x-1">
+                                              <Calendar size={12} />
+                                              <span>{new Date(card.dueDate.seconds * 1000).toLocaleDateString()}</span>
+                                            </div>
+                                          )}
+                                          {card.assignee && (
+                                            <div className="flex items-center space-x-1">
+                                              <User size={12} />
+                                              <span>{card.assignee}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        {card.attachments?.length > 0 && (
+                                          <div className="flex items-center space-x-1">
+                                            <PaperClipIcon className="h-3 w-3" />
+                                            <span>{card.attachments.length}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              )
+                            })}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Desktop: Grid layout */}
+              <div className="hidden lg:grid lg:grid-cols-3 gap-6">
                 {board.lists?.map(list => (
                   <div key={list.id} className="bg-gray-100 rounded-lg p-4">
                     <div className="flex justify-between items-center mb-4">
@@ -679,12 +814,11 @@ export default function Dashboard() {
         {/* Drag & Drop Hint */}
         <DragDropHint />
 
-        {/* Upgrade Modal */}
-        <UpgradeModal
+        {/* Dynamic Upgrade Modal */}
+        <DynamicUpgradeModal
           isOpen={upgradeModal.isOpen}
           onClose={() => setUpgradeModal({ isOpen: false, reason: '' })}
           reason={upgradeModal.reason}
-          currentPlan={subscription?.plan || 'free'}
         />
       </motion.div>
     </Layout>

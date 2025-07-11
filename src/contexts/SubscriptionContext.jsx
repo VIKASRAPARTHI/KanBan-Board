@@ -89,8 +89,10 @@ export function SubscriptionProvider({ children }) {
             }
 
             try {
+              console.log('Creating default free subscription for new user:', currentUser.uid)
               await setDoc(doc(db, 'subscriptions', currentUser.uid), defaultSubscription)
               setSubscription(defaultSubscription)
+              console.log('Free subscription created successfully:', defaultSubscription)
             } catch (error) {
               console.error('Error creating default subscription:', error)
               setSubscription(null)
@@ -129,15 +131,31 @@ export function SubscriptionProvider({ children }) {
           boards: 0,
           members: 0,
           storage: 0
-        }
+        },
+        createdAt: new Date(),
+        createdBy: currentUser.uid
       }
 
+      console.log('Manually creating free subscription for user:', currentUser.uid)
       await setDoc(doc(db, 'subscriptions', currentUser.uid), defaultSubscription)
+      setSubscription(defaultSubscription)
+      console.log('Free subscription created successfully')
       return true
     } catch (error) {
       console.error('Error creating free subscription:', error)
       return false
     }
+  }
+
+  const ensureSubscriptionExists = async () => {
+    if (!currentUser) return false
+
+    if (!subscription && !loading) {
+      console.log('No subscription found, creating free subscription...')
+      return await createFreeSubscription()
+    }
+
+    return true
   }
 
   const getPlanLimits = (planName = subscription?.plan || 'free') => {
@@ -151,8 +169,10 @@ export function SubscriptionProvider({ children }) {
 
   const canCreateBoard = (currentBoardCount = 0) => {
     if (!subscription) return false
+
     const limits = getPlanLimits()
     if (limits.boards === -1) return true
+
     return currentBoardCount < limits.boards
   }
 
@@ -366,6 +386,7 @@ export function SubscriptionProvider({ children }) {
     isTrialExpired,
     getTrialDaysLeft,
     createFreeSubscription,
+    ensureSubscriptionExists,
     isPaidSubscription,
     isTrialSubscription,
     planLimits: PLAN_LIMITS

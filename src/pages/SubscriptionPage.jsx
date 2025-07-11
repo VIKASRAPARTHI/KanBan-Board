@@ -193,7 +193,7 @@ export default function SubscriptionPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 py-12">
+      <div className="min-h-screen bg-gray-50 py-8 sm:py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -201,13 +201,13 @@ export default function SubscriptionPage() {
             className="bg-white rounded-lg shadow-lg overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8 text-white">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-6 sm:py-8 text-white">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold">
+                  <h1 className="text-2xl sm:text-3xl font-bold">
                     Upgrade to {selectedPlan.name}
                   </h1>
-                  <p className="text-indigo-100 mt-2">
+                  <p className="text-indigo-100 mt-2 text-sm sm:text-base">
                     Unlock powerful features and boost your productivity
                   </p>
                 </div>

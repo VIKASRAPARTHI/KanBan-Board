@@ -64,30 +64,30 @@ export default function Analytics() {
 
   return (
     <Layout>
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="text-gray-600">Track your team's performance and progress</p>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+          <p className="text-gray-600 text-sm sm:text-base">Track your team's performance and progress</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {statCards.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow p-6">
+            <div key={index} className="bg-white rounded-lg shadow p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
                 </div>
-                <div className={`${stat.color} rounded-lg p-3`}>
-                  <stat.icon className="h-6 w-6 text-white" />
+                <div className={`${stat.color} rounded-lg p-2 sm:p-3`}>
+                  <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <h3 className="text-lg font-semibold mb-4">Cards by Board</h3>
             <div className="space-y-4">
               {boards.map(board => (
